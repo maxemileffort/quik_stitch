@@ -10,11 +10,14 @@ const apiClient = axios.create({
 // Add a request interceptor to include the JWT token
 apiClient.interceptors.request.use(
   async (config) => {
+    console.log(`>>> apiClient Interceptor: Requesting ${config.method?.toUpperCase()} ${config.url}`);
+    console.log(`>>> apiClient Interceptor: BEFORE await supabase.auth.getSession()`);
     // Get the current session from Supabase
     const { data: { session }, error } = await supabase.auth.getSession();
+    console.log(`>>> apiClient Interceptor: AFTER await supabase.auth.getSession()`);
 
     if (error) {
-      console.error('Error getting Supabase session:', error);
+      console.error('>>> apiClient Interceptor: Error getting Supabase session:', error);
       // Handle error appropriately, maybe redirect to login or show error
       return Promise.reject(error);
     }
@@ -25,9 +28,10 @@ apiClient.interceptors.request.use(
     } else {
       // Handle case where there's no session/token (optional, depends on API requirements)
       // If the endpoint requires auth, the backend middleware will reject it anyway.
-      console.log('No active session found, request sent without Authorization header.');
+      console.log('>>> apiClient Interceptor: No active session/token found.');
     }
 
+    console.log(`>>> apiClient Interceptor: Request config prepared for ${config.url}`);
     return config;
   },
   (error) => {

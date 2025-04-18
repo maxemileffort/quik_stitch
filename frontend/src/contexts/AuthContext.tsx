@@ -46,7 +46,8 @@ export const useAuth = () => {
 // Auth Provider Component
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true); // Start loading true for initial session check
+  const [loading, setLoading] = useState(true); // For initial load spinner
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false); // Track initial load
 
   // Function to fetch user profile from our backend
   const fetchUserProfile = async () => {
@@ -68,35 +69,76 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error.response?.status === 401) {
         // If specifically unauthorized, maybe force Supabase sign out?
         // await supabase.auth.signOut(); // Consider implications
-        console.log("Received 401 fetching /auth/me, user set to null.");
-      }
-    }
-  };
+       console.log("Received 401 fetching /auth/me, user set to null.");
+       }
+     } finally {
+        // Add logging to confirm this function always finishes execution path
+        console.log(`fetchUserProfile finished execution.`);
+     }
+   };
 
-  // Listen to Supabase auth state changes
+   // Listen to Supabase auth state changes
   useEffect(() => {
+    let isMounted = true; // Prevent state updates on unmounted component
     setLoading(true);
 
-    // 1. Handle initial session check AND profile fetch
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        console.log("Initial session found, fetching profile...");
-        await fetchUserProfile(); // Fetch profile if session exists
-      } else {
-        console.log("No initial session found.");
-        setUser(null); // No session, no user
-      }
-      setLoading(false); // Initial check and potential fetch done
-    }).catch((error) => {
-        console.error("Error getting initial session:", error);
-        setUser(null);
-        setLoading(false); // Still finish loading even on error
-    });
+    const checkSessionAndFetch = async () => {
+      try {
+        // 1. Check for existing session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    // 2. Subscribe to future auth state changes
+        if (sessionError) {
+          throw sessionError; // Throw to be caught by outer catch
+        }
+
+         // 2. If session exists, fetch profile; otherwise, clear user
+         if (session) {
+           console.log("Initial session found, attempting profile fetch...");
+           console.log(">>> BEFORE await fetchUserProfile (initial load)");
+           try {
+             // fetchUserProfile already handles setting user state (including null on error)
+             await fetchUserProfile();
+             console.log(">>> AFTER await fetchUserProfile (initial load)");
+             console.log("Profile fetch attempt complete (initial load).");
+           } catch (profileError) {
+             // Log profile fetch error, but don't block loading completion.
+            // setUser(null) is handled within fetchUserProfile's catch block.
+            console.error("Error fetching profile during initial load:", profileError);
+          }
+        } else {
+          console.log("No initial session found.");
+          if (isMounted) setUser(null); // No session, no user
+        }
+
+      } catch (error) {
+        // Catch errors from getSession or profile fetch if they bubble up
+        console.error("Error during initial session check/fetch:", error);
+        if (isMounted) setUser(null); // Clear user on error
+       } finally {
+        // Ensure loading is always set to false after check/fetch attempt
+        if (isMounted) {
+            console.log(">>> AuthContext finally block reached. isMounted:", isMounted); // Added log
+            console.log("Setting loading to false (initial load).");
+            setLoading(false);
+            setInitialLoadComplete(true); // Mark initial load as complete
+        }
+      }
+    };
+
+    checkSessionAndFetch();
+
+    // 3. Subscribe to future auth state changes (no loading state changes here)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Supabase Auth Event:", event, session);
+
+        // --- Add check for initial load completion ---
+        if (!initialLoadComplete) {
+          console.log(`Auth event ${event} received before initial load complete, skipping background fetch.`);
+          return;
+        }
+        // --- End check ---
+
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
           // User is signed in or session refreshed, fetch/update profile
            if (session) {
@@ -118,11 +160,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     );
 
-    // Cleanup listener on component unmount
+    // Cleanup listener and isMounted flag on component unmount
     return () => {
+      isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once
 
 
   // Function to request a magic link from the backend

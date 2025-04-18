@@ -38,105 +38,117 @@ function Dashboard() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to store interval ID
   const navigate = useNavigate(); // Initialize navigate hook
 
-  // Function to fetch jobs, modified to handle polling updates
-  const fetchJobs = async (isPollingUpdate = false) => {
-    if (!user) {
-      if (!isPollingUpdate) { // Only set main error if it's the initial load
-        setError("Please log in to view your dashboard.");
-        setInitialLoading(false);
-      }
-      return;
-    }
+  // Function to fetch jobs specifically for polling updates
+  const pollJobs = async () => {
+    if (!user) return; // Don't poll if user logged out
 
-    if (!isPollingUpdate) {
-      setInitialLoading(true);
-      setError(null);
-    }
-    setPollingError(null); // Clear polling error on each attempt
-
+    setPollingError(null); // Clear previous polling error
     try {
+      console.log("Polling: Fetching jobs...");
       const response = await apiClient.get<Job[]>('/jobs');
-      setJobs(response.data);
+      setJobs(response.data); // Update jobs state
 
-      // Check if polling should continue
+      // Check if polling should continue based on fetched data
       const hasActiveJobs = response.data.some(job => job.status === 'QUEUED' || job.status === 'PROCESSING');
       if (!hasActiveJobs && pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
-        console.log("Polling stopped: No active jobs.");
-      } else if (hasActiveJobs && !pollingIntervalRef.current) {
-        // Start polling if it wasn't running but now there are active jobs
-        startPolling();
+        console.log("Polling stopped: No active jobs found during poll.");
       }
+      // No need to restart polling here, the interval continues if not cleared
 
     } catch (err: any) {
-      console.error("Error fetching jobs:", err);
-      const errorMessage = err.response?.data?.error || "Failed to fetch jobs.";
-      if (isPollingUpdate) {
-        setPollingError(errorMessage); // Set polling error without disrupting UI much
-      } else {
-        setError(errorMessage); // Set main error for initial load failure
-      }
-    } finally {
-      if (!isPollingUpdate) {
-        setInitialLoading(false);
-      }
+      console.error("Polling Error: Failed to fetch jobs:", err);
+      const errorMessage = err.response?.data?.error || "Polling failed.";
+      setPollingError(errorMessage);
+      // Optionally stop polling on persistent errors?
+      // if (pollingIntervalRef.current) {
+      //   clearInterval(pollingIntervalRef.current);
+      //   pollingIntervalRef.current = null;
+      // }
     }
+    // No finally block needed specifically for polling's loading state
   };
+
 
   // Function to start polling
   const startPolling = () => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current); // Clear existing interval if any
-    }
-    console.log("Starting polling...");
-    pollingIntervalRef.current = setInterval(() => {
-      console.log("Polling for job updates...");
-      fetchJobs(true); // Pass true to indicate it's a polling update
-    }, 5000); // Poll every 5 seconds
-  };
+     }
+     console.log("Starting polling...");
+     pollingIntervalRef.current = setInterval(() => {
+       // Call the correct polling function
+       pollJobs();
+     }, 5000); // Poll every 5 seconds
+   };
 
-  // Effect for initial fetch and setting up/tearing down polling
+  // Effect for initial fetch
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if unmounted quickly
+
     if (user) {
-      fetchJobs().then(() => {
-         // Start polling immediately after initial fetch if active jobs exist
-         if (jobs.some(job => job.status === 'QUEUED' || job.status === 'PROCESSING')) {
-            startPolling();
-         }
-      });
+      console.log("Dashboard: User found, initiating initial job fetch.");
+      setInitialLoading(true); // Set loading true before fetch starts
+      setError(null);
+      setPollingError(null); // Clear any previous errors
+
+      apiClient.get<Job[]>('/jobs')
+        .then(response => {
+          console.log("Dashboard: Initial job fetch successful.");
+          if (isMounted) {
+            setJobs(response.data);
+            // Check if polling needs to start based on initial data
+            const hasActiveJobs = response.data.some(job => job.status === 'QUEUED' || job.status === 'PROCESSING');
+            if (hasActiveJobs) {
+                startPolling(); // Start polling if needed
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Dashboard: Error fetching initial jobs:", err);
+          if (isMounted) {
+            setError(err.response?.data?.error || "Failed to fetch jobs.");
+          }
+        })
+        .finally(() => {
+          console.log("Dashboard: Initial job fetch attempt finished.");
+          if (isMounted) {
+            setInitialLoading(false); // Ensure loading is false after attempt
+          }
+        });
     } else {
-       // Ensure loading is false and error is set if user logs out/isn't logged in
+       // Handle case where user is not logged in initially or logs out
+       console.log("Dashboard: No user found, clearing state.");
        setInitialLoading(false);
        setError("Please log in to view your dashboard.");
-       setJobs([]); // Clear jobs if user logs out
+       setJobs([]);
+       // Ensure polling is stopped if user logs out
+       if (pollingIntervalRef.current) {
+         clearInterval(pollingIntervalRef.current);
+         pollingIntervalRef.current = null;
+       }
     }
 
-    // Cleanup function to clear interval on component unmount or user change
+    // Cleanup function for unmount or user change
     return () => {
+      console.log("Dashboard: Cleaning up effect (unmount or user change).");
+      isMounted = false;
+      // Stop polling if it's running
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
-        console.log("Polling stopped: Component unmounted or user changed.");
+        console.log("Polling stopped due to cleanup.");
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Re-run effect if user changes
+  }, [user]); // Re-run only when user object changes
 
-   // Effect to start/stop polling based on job status changes after initial load
-   useEffect(() => {
-    if (!initialLoading && user) {
-        const hasActiveJobs = jobs.some(job => job.status === 'QUEUED' || job.status === 'PROCESSING');
-        if (hasActiveJobs && !pollingIntervalRef.current) {
-            startPolling();
-        } else if (!hasActiveJobs && pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-            console.log("Polling stopped: No active jobs remaining.");
-        }
-    }
-   // eslint-disable-next-line react-hooks/exhaustive-deps
-   }, [jobs, initialLoading, user]);
+
+  // NOTE: The second useEffect for polling based on job changes is removed.
+  // Polling is now started within the initial fetch's .then() block
+  // and stopped either when no active jobs are found during a poll,
+  // or during the cleanup of the main useEffect.
 
 
   // Function to handle job deletion
