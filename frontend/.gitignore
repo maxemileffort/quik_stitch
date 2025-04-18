@@ -1,0 +1,82 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional PostCSS JIT cache
+.cache
+
+# Optional Gatsby files
+.cache/
+public
+
+# Optional vite-plugin-pwa runtime caching
+node_modules/.vite-plugin-pwa/
+
+# Optional vite-ssg cache
+.vite-ssg-cache/
+
+# Optional Nuxt files
+.nuxt/
+.output/
+
+# Optional Next.js files
+.next/
+out/
+
+# Optional Remix files
+.cache/
+build/
+public/build/
+
+# Optional SvelteKit files
+.svelte-kit/
+build/
+
+# Optional SolidStart files
+.solid/
+dist/
+
+# Optional Astro files
+dist/
+.astro/
+
+# Optional Storybook files
+storybook-static
+
+# Optional Vitest files
+coverage/

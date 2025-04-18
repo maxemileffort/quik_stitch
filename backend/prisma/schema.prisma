@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["multiSchema"] // Enable multi-schema support
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"] // Only manage the public schema with Prisma Migrate
+}
+
+// --- User Model ---
+// Use Supabase Auth UUID as the primary key
+model User {
+  id         String    @id // Store the Supabase Auth UUID (no default CUID)
+  email                String    @unique
+  name                 String?   // Optional user name
+  isPaidUser           Boolean   @default(false) // Tracks active subscription or grace period
+  stripeCustomerId     String?   @unique // Link to Stripe Customer object
+  stripeSubscriptionId String?   @unique // Link to active Stripe Subscription object
+  subscriptionStatus   String?   // e.g., 'active', 'past_due', 'canceled', 'incomplete'
+  gracePeriodEndsAt    DateTime? // Tracks when the grace period after a failed payment ends
+  isAdmin              Boolean   @default(false) // Flag to identify admin users
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  jobs   Job[] // Relation to Job model
+  videos Video[] // Relation to Video model
+
+  @@schema("public")
+}
+
+// --- Job Model ---
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+
+  @@schema("public")
+}
+
+enum JobType {
+  STITCHING
+  TRANSCRIPTION
+
+  @@schema("public")
+}
+
+model Job {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      JobType
+  status    JobStatus @default(QUEUED)
+  inputFile String? // Path or identifier for the input file(s)
+  outputFile String? // Path or identifier for the output file OR transcription text
+  errorMessage String? // Store error messages if job fails
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  videoId String? @unique // Optional link to a resulting video, must be unique
+  video   Video?  @relation(fields: [videoId], references: [id])
+
+  @@index([userId]) // Add index for faster lookups by user
+  @@schema("public")
+}
+
+// --- Video Model ---
+model Video {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  storagePath String // Path in persistent storage (e.g., Supabase Storage bucket)
+  fileName    String
+  sizeBytes   Int?
+  durationMs  Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  job Job? // Optional relation back to the job that created it
+
+  @@schema("public")
+}
