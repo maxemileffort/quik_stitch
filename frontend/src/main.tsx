@@ -7,9 +7,16 @@ import './index.css';
 
 // Load Stripe outside of the component render to avoid recreating the Stripe object on every render.
 // Use your publishable key from the .env file
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+let stripeKey;
 
-if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
+if(import.meta.env.TEST_MODE==='true'){
+  stripeKey = import.meta.env.VITE_STRIPE_TEST_PUB_KEY;
+}else{
+  stripeKey = import.meta.env.VITE_STRIPE_PROD_PUB_KEY;
+}
+const stripePromise = loadStripe(stripeKey);
+
+if (!stripeKey) {
   console.error("Error: VITE_STRIPE_PUBLISHABLE_KEY is not set in the environment variables.");
   // Optionally render an error message or prevent the app from rendering
 }

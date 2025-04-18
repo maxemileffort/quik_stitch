@@ -24,6 +24,7 @@ interface AuthContextType {
   verifyMagicLink: (token: string) => Promise<{ success: boolean; user: AuthUser | null; message: string }>;
   // checkSession is removed, handled by onAuthStateChange
   logout: () => Promise<void>;
+  refreshUserProfile: () => Promise<void>; // Add function to refresh user data
 }
 
 // Create the Auth Context
@@ -98,13 +99,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log("Supabase Auth Event:", event, session);
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
           // User is signed in or session refreshed, fetch/update profile
-          if (session) {
-             console.log(`Auth event ${event}, fetching profile...`);
-             setLoading(true); // Show loading while fetching profile
-             await fetchUserProfile();
-             setLoading(false);
-          } else {
-             // Should not happen for SIGNED_IN, but handle defensively
+           if (session) {
+              console.log(`Auth event ${event}, fetching profile (background)...`);
+              // setLoading(true); // Don't show full loader for background updates
+              await fetchUserProfile(); // Fetch profile to ensure data is fresh
+              // setLoading(false); // Loading state is not managed here anymore
+           } else {
+              // Should not happen for SIGNED_IN, but handle defensively
              console.warn(`Auth event ${event} but no session found.`);
              setUser(null);
           }
@@ -209,6 +210,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     verifyMagicLink,
     // checkSession removed
     logout,
+    refreshUserProfile: fetchUserProfile, // Expose fetchUserProfile as refreshUserProfile
   };
 
   return (

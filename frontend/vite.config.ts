@@ -10,7 +10,7 @@ export default defineConfig({
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      // 'Cross-Origin-Embedder-Policy': 'require-corp', // Commented out to allow cross-origin resources like Stripe.js and fonts
     },
   },
 });

@@ -11,10 +11,10 @@ const PaymentCancel: React.FC = () => {
       <p className="text-gray-600 mb-8">If you encountered an issue, please try again or contact support.</p>
       <div className="space-x-4">
         <Link
-          to="/upload" // Or back to the page where checkout was initiated
+          to="/pricing" // Link back to the pricing page to try upgrading again
           className="px-6 py-3 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
         >
-          Try Again
+          View Pricing
         </Link>
         <Link
           to="/dashboard"

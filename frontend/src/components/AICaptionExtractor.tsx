@@ -6,6 +6,7 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { supabase } from '../lib/supabase'; // Import Supabase client
 import { useAuth } from '../contexts/AuthContext'; // Import useAuth
 import AuthModal from './AuthModal'; // Import AuthModal
+import { toast } from 'react-toastify'; // Import toast
 
 // Define a basic structure for the expected caption format
 interface CaptionData {
@@ -63,7 +64,12 @@ function AICaptionExtractor({ videos }: AICaptionExtractorProps) {
       setIsAuthModalOpen(true);
       return; // Stop if not logged in
     }
-    // --- End Authentication Check ---
+    // --- Add Paid User Check ---
+    if (!user.isPaidUser) {
+      toast.info("AI caption extraction is available for VIP members. Please upgrade your plan on the Pricing page.");
+      return; // Stop if not a paid user
+    }
+    // --- End Paid User Check ---
 
     if (!ffmpegRef.current || !ffmpegLoaded.current) {
       setError('AI processing resources are not ready. Please wait or try refreshing.');

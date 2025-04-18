@@ -14,6 +14,7 @@ import VerifyMagicLink from './pages/VerifyMagicLink'; // Import the new page
 import PaymentSuccess from './pages/PaymentSuccess'; // Import Payment Success page
 import PaymentCancel from './pages/PaymentCancel'; // Import Payment Cancel page
 import Billing from './pages/Billing'; // Import Billing page
+import PricingPage from './pages/Pricing'; // Import Pricing page
 import AdminRoute from './components/AdminRoute'; // Import the admin route protector
 import AdminDashboard from './pages/AdminDashboard'; // Import the admin dashboard page
 
@@ -35,6 +36,7 @@ function App() {
               <Route path="/payment-success" element={<PaymentSuccess />} /> {/* Add route for payment success */}
               <Route path="/payment-cancel" element={<PaymentCancel />} /> {/* Add route for payment cancel */}
               <Route path="/billing" element={<Billing />} /> {/* Add route for billing page */}
+              <Route path="/pricing" element={<PricingPage />} /> {/* Add route for pricing page */}
 
               {/* Admin Route */}
               <Route path="/admin" element={<AdminRoute />}>

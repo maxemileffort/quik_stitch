@@ -6,7 +6,15 @@ const prisma = require('../services/prismaClient'); // Import Prisma client
 // Load environment variables
 require('dotenv').config();
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+let stripeKey;
+
+if (process.env.TEST_MODE === 'true'){
+  stripeKey = process.env.STRIPE_TEST_SECRET_KEY;
+}else{
+  stripeKey = process.env.STRIPE_PROD_SECRET_KEY;
+}
+
+const stripe = Stripe(stripeKey);
 const router = express.Router();
 
 // Endpoint to create a checkout session for subscriptions
@@ -18,9 +26,8 @@ router.post('/create-checkout-session', authenticateUser, async (req, res) => {
     return res.status(401).json({ error: 'User not authenticated or email missing.' });
   }
 
-  // --- IMPORTANT: Replace with your actual Subscription Price ID ---
-  const priceId = 'price_YOUR_SUBSCRIPTION_PRICE_ID';
-  // ---
+  // Use the actual VIP Subscription Price ID provided
+  const priceId = 'price_1RF6NWCyCoxifUD0sBYabhwz';
 
   const YOUR_DOMAIN = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -64,8 +71,8 @@ router.post('/create-checkout-session', authenticateUser, async (req, res) => {
       ],
       mode: 'subscription', // Set mode to subscription
       customer: stripeCustomerId, // Pass the Stripe Customer ID
-      success_url: `${YOUR_DOMAIN}/billing?session_id={CHECKOUT_SESSION_ID}&status=success`, // Redirect to billing page on success
-      cancel_url: `${YOUR_DOMAIN}/billing?status=cancel`, // Redirect to billing page on cancel
+      success_url: `${YOUR_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`, // Redirect to dedicated success page
+      cancel_url: `${YOUR_DOMAIN}/payment-cancel`, // Redirect to dedicated cancel page
       // We don't need client_reference_id as we use stripeCustomerId
       // Add metadata if needed, e.g., linking the checkout to a specific plan variation
       // metadata: { plan: 'premium' }

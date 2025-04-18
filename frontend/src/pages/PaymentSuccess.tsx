@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 // Optional: Import useAuth if you need to refresh user data
-// import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
   // Optional: Get auth context methods if needed
-  // const { refreshUserProfile } = useAuth(); // Assuming you add a refresh function to AuthContext
+  const { refreshUserProfile } = useAuth(); // Assuming you add a refresh function to AuthContext
 
   useEffect(() => {
     // You might want to verify the session ID with your backend here
@@ -16,13 +16,14 @@ const PaymentSuccess: React.FC = () => {
     console.log('Payment successful for session:', sessionId);
 
     // Optional: Trigger a refresh of user data after successful payment
-    // if (refreshUserProfile) {
-    //   refreshUserProfile();
-    // }
+    if (refreshUserProfile) {
+      console.log('Refreshing user profile...');
+      refreshUserProfile();
+    }
 
     // Clear any relevant local state if needed (e.g., cart items)
 
-  }, [sessionId/*, refreshUserProfile*/]);
+  }, [sessionId, refreshUserProfile]); // Add refreshUserProfile to dependency array
 
   return (
     <div className="container mx-auto px-4 py-8 text-center">

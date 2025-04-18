@@ -23,8 +23,20 @@ const Navbar = () => {
                 <Scissors className="h-8 w-8 text-blue-600" />
                 <span className="ml-2 text-xl font-bold text-gray-900">QuikStitch</span>
               </Link>
+              {/* Add Pricing link visible to all */}
+              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+                 <Link
+                    to="/pricing"
+                    className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  >
+                    Pricing
+                  </Link>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
+               {/* Mobile menu button placeholder if needed */}
+               {/* <div className="-mr-2 flex items-center sm:hidden"> ... </div> */}
+
               {user ? (
                 <>
                   <Link
